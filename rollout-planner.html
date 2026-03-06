@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Edu Rollout Strategy | Interactive Planner</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Markdown Parser (Marked) for AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC; /* Slate 50 */
+            color: #1E293B; /* Slate 800 */
+        }
+
+        /* Material Design Card */
+        .material-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border: 1px solid #E2E8F0;
+        }
+
+        /* Chart Containers */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+
+        /* Gantt Specifics */
+        .gantt-grid {
+            display: grid;
+            grid-template-columns: 260px repeat(24, minmax(60px, 1fr)); 
+            gap: 1px;
+            background-color: #E2E8F0;
+            border: 1px solid #E2E8F0;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 600px;
+            scrollbar-width: thin;
+            scrollbar-color: #CBD5E1 #F1F5F9;
+            user-select: none;
+        }
+
+        /* Webkit Scrollbar styling */
+        .gantt-grid::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        .gantt-grid::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        .gantt-grid::-webkit-scrollbar-thumb {
+            background-color: #CBD5E1;
+            border-radius: 6px;
+            border: 3px solid #F1F5F9;
+        }
+
+        .gantt-header-cell {
+            background-color: #F8FAFC;
+            padding: 8px;
+            font-size: 0.70rem;
+            font-weight: 600;
+            text-align: center;
+            color: #64748B;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            box-shadow: 0 1px 0 #E2E8F0;
+        }
+
+        .gantt-row {
+            background-color: white;
+            min-height: 48px;
+        }
+        
+        .gantt-sidebar-cell {
+            background-color: white;
+            padding: 0 8px 0 16px;
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #334155;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            border-right: 1px solid #E2E8F0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+            cursor: grab;
+        }
+
+        .gantt-sidebar-cell:active {
+            cursor: grabbing;
+        }
+
+        .gantt-sidebar-cell.drag-over-top { border-top: 2px solid #3B82F6; }
+        .gantt-sidebar-cell.drag-over-bottom { border-bottom: 2px solid #3B82F6; }
+        .category-header-sidebar.drag-over {
+            background-color: #E0E7FF;
+            border: 2px dashed #4F46E5;
+        }
+
+        .gantt-bar-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            background: white;
+        }
+
+        .gantt-bar {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 28px;
+            border-radius: 6px;
+            cursor: grab;
+            transition: transform 0.1s, box-shadow 0.2s; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: visible;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            touch-action: none; 
+            z-index: 10;
+        }
+
+        .gantt-bar:hover {
+            filter: brightness(1.05);
+            z-index: 20;
+        }
+
+        .gantt-bar.dragging {
+            cursor: grabbing;
+            z-index: 50; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            transition: none; 
+        }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            cursor: col-resize;
+            z-index: 20;
+            opacity: 0;
+        }
+        
+        .gantt-bar:hover .resize-handle {
+            background-color: rgba(255,255,255,0.2);
+            opacity: 1;
+        }
+
+        .resize-handle.left { left: 0; border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+        .resize-handle.right { right: 0; border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+
+        .category-header-sidebar {
+            grid-column: 1;
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background-color: #F1F5F9;
+            padding: 8px 16px;
+            font-weight: 700;
+            color: #475569;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #E2E8F0;
+            border-bottom: 1px solid #E2E8F0;
+            border-right: 1px solid #E2E8F0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+            cursor: pointer;
+        }
+        
+        .category-header-track {
+            grid-column: 2 / -1;
+            background-color: #F8FAFC; 
+            border-top: 1px solid #E2E8F0;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .gantt-corner-cell {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 40 !important;
+            background-color: #F8FAFC;
+            border-right: 1px solid #E2E8F0;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .grip-icon {
+            color: #CBD5E1;
+            margin-right: 8px;
+            cursor: grab;
+        }
+        
+        .edit-input {
+            width: 100%;
+            padding: 2px 4px;
+            border: 2px solid #6366F1;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            outline: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        [contenteditable]:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            outline: 1px dashed rgba(255, 255, 255, 0.3);
+            cursor: text;
+        }
+        [contenteditable]:focus {
+            background-color: rgba(255, 255, 255, 0.2);
+            outline: 2px solid white;
+            border-radius: 4px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px; /* Wider for AI content */
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: scale(0.95);
+            transition: transform 0.2s;
+        }
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        /* AI Markdown Styles */
+        .ai-response {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #334155;
+        }
+        .ai-response ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; }
+        .ai-response h3 { font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #1E293B; }
+        .ai-response strong { font-weight: 600; color: #475569; }
+        .sparkle-btn {
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+            color: white;
+            transition: all 0.2s;
+        }
+        .sparkle-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+        }
+        .sparkle-icon { margin-right: 6px; }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6366F1;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="pb-20">
+
+    <!-- HERO SECTION -->
+    <header class="bg-gradient-to-r from-indigo-700 to-blue-600 text-white py-12 px-4 shadow-lg">
+        <div class="max-w-full mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-2" contenteditable="true" spellcheck="false">
+                    ChatGPT Edu <span class="text-indigo-200">Interactive Planner</span>
+                </h1>
+                <p class="text-indigo-100 max-w-2xl text-sm md:text-base" contenteditable="true" spellcheck="false">
+                    Extended timeline for April 2026 Rollout. Drag timeline bars to schedule, drag sidebar names to reorder.
+                </p>
+                <!-- Reset Button -->
+                <button onclick="resetToDefaults()" class="mt-4 text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded border border-white/30 transition-colors">
+                    Reset Data to Default
+                </button>
+            </div>
+            <div class="flex gap-3">
+                <div class="bg-white/10 backdrop-blur px-4 py-2 rounded-lg border border-white/20 text-center cursor-pointer hover:bg-white/20 transition-colors" onclick="editStartDate()">
+                    <div class="text-xs text-indigo-200 uppercase font-semibold">Start Date</div>
+                    <div class="font-bold" id="headerStartDate">Nov 03, 2025</div>
+                    <input type="date" id="datePicker" class="hidden absolute opacity-0">
+                </div>
+                <!-- AI DASHBOARD BUTTON -->
+                <button onclick="analyzePlan()" class="sparkle-btn px-6 py-2 rounded-lg font-bold shadow-lg flex items-center border border-white/20">
+                    <span class="sparkle-icon">✨</span> Analyze Strategy
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-full mx-auto px-4 mt-8 grid grid-cols-1 gap-8">
+
+        <!-- DASHBOARD ROW -->
+        <section class="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Status Chart -->
+            <div class="material-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700" contenteditable="true">Task Completion Status</h3>
+                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Live Updates</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Intensity Chart -->
+            <div class="material-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700" contenteditable="true">Workload by Phase</h3>
+                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Total Weeks</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="intensityChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- INTERACTIVE GANTT CHART -->
+        <section class="material-card overflow-hidden flex flex-col mx-2 md:mx-6">
+            <div class="p-6 border-b border-slate-100 bg-white flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800" contenteditable="true">Master Rollout Timeline</h2>
+                    <p class="text-sm text-slate-500" contenteditable="true">
+                        <span class="font-bold text-indigo-600">Drag items</span> to reorder/schedule. <span class="font-bold text-indigo-600">Double-click</span> text to edit.
+                    </p>
+                </div>
+                <div class="hidden md:flex items-center gap-2 text-xs">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-500"></span> Governance</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500"></span> Tech</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-pink-500"></span> Comms</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500"></span> Train</span>
+                </div>
+            </div>
+
+            <!-- SCROLLABLE GANTT AREA -->
+            <div id="gantt-container" class="gantt-grid">
+                <!-- Javascript will populate this -->
+            </div>
+            
+            <!-- Scroll Hint -->
+            <div class="bg-slate-50 p-2 text-center text-xs text-slate-400 border-t border-slate-100">
+                &larr; Scroll horizontally & vertically to view full plan &rarr;
+            </div>
+        </section>
+
+    </main>
+
+    <!-- EDIT TASK MODAL -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-bold text-slate-800" id="modalTitle">Edit Task</h3>
+                <button onclick="closeModal('editModal')" class="text-slate-400 hover:text-slate-600">&times;</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Task Name</label>
+                    <input type="text" id="editName" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Start Week</label>
+                        <input type="number" id="editStart" min="1" max="24" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Duration (Weeks)</label>
+                        <input type="number" id="editDuration" min="1" max="24" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+                    <select id="editStatus" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                        <option value="Planned">Planned</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Ongoing">Ongoing</option>
+                    </select>
+                </div>
+
+                <!-- AI Description Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-semibold text-slate-500">Notes & Action Items</label>
+                        <button id="aiSuggestBtn" onclick="generateTaskSuggestions()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center">
+                            <span class="sparkle-icon">✨</span> Generate Action Plan
+                        </button>
+                    </div>
+                    <textarea id="editDescription" rows="5" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Add detailed notes here..."></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3 justify-end pt-4 border-t border-slate-100">
+                <button onclick="deleteCurrentTask()" class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md font-medium mr-auto">Delete</button>
+                <button onclick="closeModal('editModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-md font-medium">Cancel</button>
+                <button onclick="saveTaskChanges()" class="px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-md font-medium shadow-sm">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI ANALYSIS MODAL -->
+    <div id="aiAnalysisModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                <h3 class="text-xl font-bold text-slate-800 flex items-center">
+                    <span class="text-2xl mr-2">✨</span> Strategic Analysis
+                </h3>
+                <button onclick="closeModal('aiAnalysisModal')" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            
+            <div id="aiAnalysisContent" class="ai-response space-y-4 min-h-[100px]">
+                <!-- Content injected here -->
+                <div class="flex flex-col items-center justify-center py-8 text-slate-400">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-2 text-sm">Analyzing timeline structure and risks...</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end pt-4 border-t border-slate-100">
+                <button onclick="closeModal('aiAnalysisModal')" class="px-4 py-2 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-md font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TASK MODAL -->
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Add New Task</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Task Name</label>
+                    <input type="text" id="addName" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. Final Vendor Review">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Start Week</label>
+                        <input type="number" id="addStart" value="1" min="1" max="24" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Duration (Weeks)</label>
+                        <input type="number" id="addDuration" value="2" min="1" max="24" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <input type="hidden" id="addCategory">
+            </div>
+            <div class="mt-6 flex gap-3 justify-end">
+                <button onclick="closeModal('addModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-md font-medium">Cancel</button>
+                <button onclick="confirmAddTask()" class="px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-md font-medium shadow-sm">Add Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. GEMINI API INTEGRATION ---
+        const apiKey = "AIzaSyBwp7ZnB-fAEGFe7RC9IDKWyFJkw4xTe5Q"; // API Key provided by environment
+
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            // Retry logic with exponential backoff
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            
+            for (let i = 0; i <= delays.length; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        // Throw to trigger retry on API errors
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                } catch (error) {
+                    if (i === delays.length) {
+                        console.error("Gemini API Failed after retries:", error);
+                        return null; // Failure
+                    }
+                    // Wait before next retry
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+            return null;
+        }
+
+        // Feature 1: Analyze Entire Plan
+        async function analyzePlan() {
+            document.getElementById('aiAnalysisModal').classList.add('active');
+            const container = document.getElementById('aiAnalysisContent');
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-8 text-slate-500">
+                    <div class="loading-spinner mb-2"></div>
+                    <p class="text-sm animate-pulse">Analyzing schedule coherence and risks...</p>
+                </div>`;
+
+            // Construct Prompt from current state
+            const tasksSummary = tasks.map(t => 
+                `- ${t.name} (${CATEGORIES[t.phase].label}): Start W${t.start}, Duration ${t.duration}w`
+            ).join('\n');
+
+            const prompt = `
+                Act as a Project Management Expert for an EdTech rollout. 
+                Analyze the following project schedule (24-week timeline for ChatGPT Edu rollout):
+                
+                ${tasksSummary}
+
+                Please provide a brief strategic analysis in Markdown format:
+                1. **Potential Bottlenecks:** Identify 2 risks where tasks might overlap or duration seems tight.
+                2. **Strategic Recommendations:** Suggest 2 improvements to ensure smooth adoption by students and staff.
+                Keep it concise and professional.
+            `;
+
+            const result = await callGemini(prompt);
+
+            if (result) {
+                container.innerHTML = marked.parse(result);
+            } else {
+                container.innerHTML = `
+                    <div class="text-center p-4">
+                        <p class="text-red-500 font-bold mb-2">Analysis failed.</p>
+                        <p class="text-sm text-slate-600">Please check your internet connection or ensure a valid API Key is set in the code.</p>
+                    </div>`;
+            }
+        }
+
+        // Feature 2: Generate Task Details
+        async function generateTaskSuggestions() {
+            if (!currentEditingId) return;
+            const task = tasks.find(t => t.id === currentEditingId);
+            if (!task) return;
+
+            const btn = document.getElementById('aiSuggestBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<div class="loading-spinner" style="width:12px;height:12px;border-width:2px;"></div> Generating...`;
+            btn.disabled = true;
+
+            const categoryName = CATEGORIES[task.phase].label;
+            const prompt = `
+                For a project plan about "ChatGPT Edu Rollout in Schools", 
+                generate a concise description and a checklist of 3-5 actionable sub-tasks for the task:
+                
+                Task Name: "${task.name}"
+                Category: "${categoryName}"
+                Duration: ${task.duration} weeks
+
+                Format as:
+                [Description paragraph]
+                
+                Action Items:
+                - [Item 1]
+                - [Item 2]
+                ...
+            `;
+
+            const result = await callGemini(prompt);
+
+            if (result) {
+                document.getElementById('editDescription').value = result;
+            } else {
+                alert("Could not generate suggestions. Please check connection or API key.");
+            }
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+
+        // --- 2. CONFIG & STATE ---
+        const DEFAULT_START_DATE = new Date(2025, 10, 3); 
+        let START_DATE = new Date(DEFAULT_START_DATE);
+        const TOTAL_WEEKS = 24; 
+
+        const DEFAULT_CATEGORIES = {
+            'Gov': { label: 'Governance, Legal & Policy', color: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' },
+            'Tech': { label: 'Technical Deployment', color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
+            'Comms': { label: 'Communications & Change', color: 'bg-pink-500', text: 'text-pink-700', bg: 'bg-pink-50' },
+            'Train': { label: 'Training & AI Literacy', color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
+            'Ops': { label: 'Support & Operations', color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+            'KPI': { label: 'KPI Monitoring & Evaluation', color: 'bg-violet-500', text: 'text-violet-700', bg: 'bg-violet-50' }
+        };
+        let CATEGORIES = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+
+        // Added 'description' field
+        const DEFAULT_TASKS = [
+            { id: 1, name: "DPIA Lifecycle", start: 1, duration: 4, status: "Completed", phase: "Gov", description: "" },
+            { id: 2, name: "AI Principles Review", start: 1, duration: 2, status: "Completed", phase: "Gov", description: "" },
+            { id: 3, name: "Seat Allocation & Licensing", start: 3, duration: 3, status: "In Progress", phase: "Gov", description: "" },
+            { id: 4, name: "Risk & Safety Settings", start: 2, duration: 2, status: "In Progress", phase: "Gov", description: "" },
+            { id: 5, name: "Assessment Guidance", start: 6, duration: 4, status: "Planned", phase: "Gov", description: "" },
+            { id: 6, name: "Review Panel", start: 4, duration: 20, status: "Ongoing", phase: "Gov", description: "" },
+            { id: 7, name: "Engineer Recruitment", start: 1, duration: 4, status: "In Progress", phase: "Tech", description: "" },
+            { id: 8, name: "SSO & Roles Config", start: 5, duration: 3, status: "Planned", phase: "Tech", description: "" },
+            { id: 9, name: "Workspace Config", start: 7, duration: 3, status: "Planned", phase: "Tech", description: "" },
+            { id: 10, name: "Workspace Testing", start: 10, duration: 4, status: "Planned", phase: "Tech", description: "" },
+            { id: 11, name: "Analytics Setup", start: 12, duration: 4, status: "Planned", phase: "Tech", description: "" },
+            { id: 12, name: "Marketing Plan", start: 10, duration: 3, status: "Planned", phase: "Comms", description: "" },
+            { id: 13, name: "Resource Creation", start: 13, duration: 4, status: "Planned", phase: "Comms", description: "" },
+            { id: 14, name: "Launch Comms", start: 20, duration: 2, status: "Planned", phase: "Comms", description: "" },
+            { id: 15, name: "Rollout to Schools", start: 22, duration: 4, status: "Planned", phase: "Comms", description: "" },
+            { id: 16, name: "AI Champions Network", start: 8, duration: 4, status: "Planned", phase: "Train", description: "" },
+            { id: 17, name: "Staff AI Training", start: 14, duration: 4, status: "Planned", phase: "Train", description: "" },
+            { id: 18, name: "Student AI Literacy", start: 22, duration: 4, status: "Planned", phase: "Train", description: "" },
+            { id: 19, name: "Knowledge Base", start: 16, duration: 3, status: "Planned", phase: "Ops", description: "" },
+            { id: 20, name: "Readiness Review", start: 21, duration: 1, status: "Planned", phase: "Ops", description: "" },
+            { id: 21, name: "Launch Ops", start: 22, duration: 2, status: "Planned", phase: "Ops", description: "" },
+            { id: 22, name: "Dashboard Creation", start: 12, duration: 3, status: "Planned", phase: "KPI", description: "" },
+            { id: 23, name: "30/60/90 Reviews", start: 24, duration: 1, status: "Planned", phase: "KPI", description: "" }
+        ];
+        
+        let tasks = [];
+
+        let statusChartInst = null;
+        let intensityChartInst = null;
+        let currentEditingId = null;
+
+        // --- 2b. PERSISTENCE LOGIC ---
+        function loadState() {
+            const savedTasks = localStorage.getItem('eduPlanner_tasks');
+            const savedCategories = localStorage.getItem('eduPlanner_categories');
+            const savedDate = localStorage.getItem('eduPlanner_startDate');
+
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+            } else {
+                tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+            }
+
+            if (savedCategories) {
+                CATEGORIES = JSON.parse(savedCategories);
+            } else {
+                CATEGORIES = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+            }
+
+            if (savedDate) {
+                START_DATE = new Date(savedDate);
+            } else {
+                START_DATE = new Date(DEFAULT_START_DATE);
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('eduPlanner_tasks', JSON.stringify(tasks));
+            localStorage.setItem('eduPlanner_categories', JSON.stringify(CATEGORIES));
+            localStorage.setItem('eduPlanner_startDate', START_DATE.toISOString());
+            console.log("State Saved to LocalStorage");
+        }
+
+        function resetToDefaults() {
+            if(confirm("Are you sure you want to reset all data? This will clear all your custom changes.")) {
+                localStorage.removeItem('eduPlanner_tasks');
+                localStorage.removeItem('eduPlanner_categories');
+                localStorage.removeItem('eduPlanner_startDate');
+                location.reload();
+            }
+        }
+
+        // --- 3. RENDERING ---
+        function getWeekDate(weekNum) {
+            const d = new Date(START_DATE);
+            d.setDate(d.getDate() + (weekNum - 1) * 7);
+            const month = d.toLocaleString('default', { month: 'short' });
+            return `${month} ${d.getDate()}`;
+        }
+
+        function init() {
+            loadState(); // Load Data first
+            renderGantt();
+            renderCharts();
+            updateHeaderDate();
+        }
+
+        function renderGantt() {
+            const container = document.getElementById('gantt-container');
+            container.innerHTML = ''; 
+
+            const corner = document.createElement('div');
+            corner.className = 'gantt-header-cell gantt-corner-cell';
+            corner.textContent = 'Task Name';
+            corner.style.minWidth = '260px'; 
+            container.appendChild(corner);
+
+            for (let i = 1; i <= TOTAL_WEEKS; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'gantt-header-cell';
+                cell.innerHTML = `<div>W${i}</div><div class="text-[9px] font-normal text-slate-400 whitespace-nowrap">${getWeekDate(i)}</div>`;
+                container.appendChild(cell);
+            }
+
+            Object.keys(CATEGORIES).forEach(catKey => {
+                const catConfig = CATEGORIES[catKey];
+                const catTasks = tasks.filter(t => t.phase === catKey);
+
+                const sidebarHeader = document.createElement('div');
+                sidebarHeader.className = 'category-header-sidebar';
+                sidebarHeader.dataset.category = catKey; 
+                
+                sidebarHeader.ondblclick = (e) => startInlineEdit(e.currentTarget, 'category', catKey);
+                sidebarHeader.addEventListener('dragover', (e) => { e.preventDefault(); sidebarHeader.classList.add('drag-over'); });
+                sidebarHeader.addEventListener('dragleave', (e) => { sidebarHeader.classList.remove('drag-over'); });
+                sidebarHeader.addEventListener('drop', handleSidebarDrop);
+
+                sidebarHeader.innerHTML = `
+                    <span class="text-sm font-bold flex items-center gap-2 pointer-events-none">
+                        <span class="w-3 h-3 rounded-full ${catConfig.color}"></span>
+                        <span class="label-text">${catConfig.label}</span>
+                    </span>
+                    <button onclick="openAddModal('${catKey}')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-2 py-1 rounded transition-colors shadow-sm font-medium">
+                        + Add
+                    </button>
+                `;
+                container.appendChild(sidebarHeader);
+
+                const trackHeader = document.createElement('div');
+                trackHeader.className = 'category-header-track';
+                container.appendChild(trackHeader);
+
+                catTasks.forEach(task => {
+                    const label = document.createElement('div');
+                    label.className = 'gantt-sidebar-cell';
+                    label.draggable = true; 
+                    label.dataset.id = task.id; 
+                    
+                    label.ondblclick = (e) => startInlineEdit(e.currentTarget, 'task', task.id);
+                    label.addEventListener('dragstart', handleSidebarDragStart);
+                    label.addEventListener('dragover', handleSidebarDragOver);
+                    label.addEventListener('dragleave', handleSidebarDragLeave);
+                    label.addEventListener('drop', handleSidebarDrop);
+
+                    label.innerHTML = `<span class="grip-icon">⋮⋮</span> <span class="label-text truncate">${task.name}</span>`;
+                    container.appendChild(label);
+
+                    const lane = document.createElement('div');
+                    lane.className = 'gantt-row relative';
+                    lane.style.gridColumn = `2 / span ${TOTAL_WEEKS}`;
+                    
+                    const bar = document.createElement('div');
+                    bar.className = `gantt-bar ${catConfig.color}`;
+                    
+                    const leftPct = ((task.start - 1) / TOTAL_WEEKS) * 100;
+                    const widthPct = (task.duration / TOTAL_WEEKS) * 100;
+
+                    bar.style.left = `${leftPct}%`;
+                    bar.style.width = `${widthPct}%`;
+                    
+                    const content = document.createElement('div');
+                    content.className = 'truncate pointer-events-none px-2';
+                    content.textContent = `${task.duration}w - ${task.name}`;
+                    bar.appendChild(content);
+
+                    const leftHandle = document.createElement('div');
+                    leftHandle.className = 'resize-handle left';
+                    leftHandle.dataset.handle = 'left';
+                    bar.appendChild(leftHandle);
+
+                    const rightHandle = document.createElement('div');
+                    rightHandle.className = 'resize-handle right';
+                    rightHandle.dataset.handle = 'right';
+                    bar.appendChild(rightHandle);
+
+                    bar.addEventListener('mousedown', (e) => handleDragStart(e, task, bar));
+                    
+                    lane.appendChild(bar);
+
+                    for(let w=1; w<TOTAL_WEEKS; w++) {
+                        const line = document.createElement('div');
+                        line.className = 'absolute top-0 bottom-0 border-r border-slate-100';
+                        line.style.left = `${(w/TOTAL_WEEKS)*100}%`;
+                        lane.appendChild(line);
+                    }
+
+                    container.appendChild(lane);
+                });
+            });
+        }
+
+        // --- 4. INTERACTIVITY (EDITING) ---
+        function startInlineEdit(element, type, id) {
+            let currentText = "";
+            let dataObject = null;
+
+            if (type === 'task') {
+                dataObject = tasks.find(t => t.id === id);
+                currentText = dataObject.name;
+            } else if (type === 'category') {
+                dataObject = CATEGORIES[id];
+                currentText = dataObject.label;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.className = 'edit-input';
+            element.draggable = false;
+            
+            const save = () => {
+                const newVal = input.value.trim();
+                if (newVal) {
+                    if (type === 'task') dataObject.name = newVal;
+                    else if (type === 'category') dataObject.label = newVal;
+                    saveState(); // SAVE
+                }
+                init();
+            };
+
+            input.onblur = save;
+            input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); e.stopPropagation(); };
+            
+            const textSpan = element.querySelector('.label-text');
+            if (textSpan) {
+                textSpan.innerHTML = '';
+                textSpan.appendChild(input);
+                input.focus();
+            }
+        }
+
+        function editStartDate() {
+            const picker = document.getElementById('datePicker');
+            picker.showPicker();
+            picker.onchange = (e) => {
+                if (e.target.valueAsDate) {
+                    START_DATE = e.target.valueAsDate;
+                    saveState(); // SAVE
+                    init();
+                }
+            };
+        }
+
+        function updateHeaderDate() {
+            const month = START_DATE.toLocaleString('default', { month: 'short' });
+            const day = START_DATE.getDate().toString().padStart(2, '0');
+            const year = START_DATE.getFullYear();
+            document.getElementById('headerStartDate').innerText = `${month} ${day}, ${year}`;
+        }
+
+        // --- 5. DRAG & DROP LOGIC ---
+        // (Sidebar and Timeline dragging implementations kept from previous robust version)
+        let sidebarDraggedId = null;
+        function handleSidebarDragStart(e) {
+            if (e.target.tagName === 'INPUT') { e.preventDefault(); return; }
+            sidebarDraggedId = parseInt(e.target.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.style.opacity = '0.5';
+        }
+        function handleSidebarDragOver(e) {
+            e.preventDefault();
+            const target = e.currentTarget;
+            if (sidebarDraggedId && parseInt(target.dataset.id) === sidebarDraggedId) return;
+            const rect = target.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            target.classList.remove('drag-over-top', 'drag-over-bottom');
+            if (e.clientY < midpoint) target.classList.add('drag-over-top');
+            else target.classList.add('drag-over-bottom');
+        }
+        function handleSidebarDragLeave(e) { e.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom'); }
+        function handleSidebarDrop(e) {
+            e.preventDefault();
+            const target = e.currentTarget;
+            target.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over');
+            const sourceIndex = tasks.findIndex(t => t.id === sidebarDraggedId);
+            if (sourceIndex === -1) return;
+            const sourceTask = tasks[sourceIndex];
+
+            if (target.classList.contains('gantt-sidebar-cell')) {
+                const targetId = parseInt(target.dataset.id);
+                if (targetId === sidebarDraggedId) return;
+                const newTargetIndex = tasks.findIndex(t => t.id === targetId);
+                const targetTask = tasks[newTargetIndex];
+                sourceTask.phase = targetTask.phase;
+                tasks.splice(sourceIndex, 1);
+                
+                const rect = target.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                if (e.clientY < midpoint) tasks.splice(newTargetIndex, 0, sourceTask);
+                else tasks.splice(newTargetIndex + 1, 0, sourceTask);
+            } else if (target.classList.contains('category-header-sidebar')) {
+                const targetCat = target.dataset.category;
+                sourceTask.phase = targetCat;
+                tasks.splice(sourceIndex, 1);
+                const catStartIndex = tasks.findIndex(t => t.phase === targetCat);
+                if (catStartIndex === -1) tasks.push(sourceTask);
+                else tasks.splice(catStartIndex, 0, sourceTask);
+            }
+            if (document.querySelector(`[data-id="${sidebarDraggedId}"]`)) document.querySelector(`[data-id="${sidebarDraggedId}"]`).style.opacity = '1';
+            sidebarDraggedId = null;
+            saveState(); // SAVE
+            init();
+        }
+
+        let dragMode = null; let startX = 0; let initialLeftPct = 0; let initialWidthPct = 0; let draggedTask = null; let draggedBar = null; let dragStartX = 0; 
+        function handleDragStart(e, task, bar) {
+            e.preventDefault(); 
+            if (e.target.dataset.handle === 'left') dragMode = 'resize-left';
+            else if (e.target.dataset.handle === 'right') dragMode = 'resize-right';
+            else dragMode = 'move';
+            draggedTask = task; draggedBar = bar; startX = e.clientX; dragStartX = e.clientX;
+            initialLeftPct = parseFloat(bar.style.left); initialWidthPct = parseFloat(bar.style.width);
+            bar.classList.add('dragging');
+            document.addEventListener('mousemove', handleDragMove); document.addEventListener('mouseup', handleDragEnd);
+        }
+        function handleDragMove(e) {
+            if (!dragMode) return;
+            const lane = draggedBar.parentElement;
+            const laneWidth = lane.getBoundingClientRect().width;
+            const deltaPct = ((e.clientX - startX) / laneWidth) * 100;
+            
+            if (dragMode === 'move') {
+                let newLeft = initialLeftPct + deltaPct;
+                if (newLeft < 0) newLeft = 0;
+                if (newLeft + initialWidthPct > 100) newLeft = 100 - initialWidthPct;
+                draggedBar.style.left = `${newLeft}%`;
+            } else if (dragMode === 'resize-right') {
+                let newWidth = initialWidthPct + deltaPct;
+                if (newWidth < (1/TOTAL_WEEKS)*100) newWidth = (1/TOTAL_WEEKS)*100;
+                if (initialLeftPct + newWidth > 100) newWidth = 100 - initialLeftPct;
+                draggedBar.style.width = `${newWidth}%`;
+            } else if (dragMode === 'resize-left') {
+                let newLeft = initialLeftPct + deltaPct;
+                let newWidth = initialWidthPct - deltaPct;
+                if (newWidth < (1/TOTAL_WEEKS)*100) { newLeft = initialLeftPct + (initialWidthPct - (1/TOTAL_WEEKS)*100); newWidth = (1/TOTAL_WEEKS)*100; }
+                if (newLeft < 0) { newLeft = 0; newWidth = initialWidthPct + initialLeftPct; }
+                draggedBar.style.left = `${newLeft}%`; draggedBar.style.width = `${newWidth}%`;
+            }
+        }
+        function handleDragEnd(e) {
+            if (!dragMode) return;
+            document.removeEventListener('mousemove', handleDragMove); document.removeEventListener('mouseup', handleDragEnd);
+            draggedBar.classList.remove('dragging');
+            if (Math.abs(e.clientX - dragStartX) < 3) { openEditModal(draggedTask.id); resetDragState(); return; }
+            const finalLeftPct = parseFloat(draggedBar.style.left);
+            const finalWidthPct = parseFloat(draggedBar.style.width);
+            let newStart = Math.round((finalLeftPct / 100) * TOTAL_WEEKS) + 1;
+            if (newStart < 1) newStart = 1;
+            let durationWeeks = Math.round((finalWidthPct / 100) * TOTAL_WEEKS);
+            if (durationWeeks < 1) durationWeeks = 1;
+            if (newStart + durationWeeks > TOTAL_WEEKS + 1) {
+                if (dragMode === 'move') newStart = TOTAL_WEEKS - durationWeeks + 1;
+                else durationWeeks = TOTAL_WEEKS - newStart + 1;
+            }
+            draggedTask.start = newStart; draggedTask.duration = durationWeeks;
+            saveState(); // SAVE
+            resetDragState(); init();
+        }
+        function resetDragState() { dragMode = null; draggedBar = null; draggedTask = null; }
+
+        // --- 6. CHART RENDERING ---
+        function renderCharts() {
+            const statusCounts = { Completed: 0, InProgress: 0, Planned: 0, Ongoing: 0 };
+            tasks.forEach(t => {
+                const s = t.status === "In Progress" ? "InProgress" : t.status;
+                if(statusCounts[s] !== undefined) statusCounts[s]++; else statusCounts.Planned++;
+            });
+            const phaseIntensity = {}; Object.keys(CATEGORIES).forEach(k => phaseIntensity[k] = 0);
+            tasks.forEach(t => { if(phaseIntensity[t.phase] !== undefined) phaseIntensity[t.phase] += t.duration; });
+
+            if (statusChartInst) statusChartInst.destroy();
+            statusChartInst = new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'In Progress', 'Ongoing', 'Planned'],
+                    datasets: [{ data: [statusCounts.Completed, statusCounts.InProgress, statusCounts.Ongoing, statusCounts.Planned], backgroundColor: ['#10B981', '#3B82F6', '#8B5CF6', '#E2E8F0'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+
+            if (intensityChartInst) intensityChartInst.destroy();
+            const hexMap = { 'Gov': '#6366F1', 'Tech': '#3B82F6', 'Comms': '#EC4899', 'Train': '#F59E0B', 'Ops': '#10B981', 'KPI': '#8B5CF6' };
+            intensityChartInst = new Chart(document.getElementById('intensityChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(CATEGORIES).map(k => k),
+                    datasets: [{ label: 'Weeks of Effort', data: Object.keys(CATEGORIES).map(k => phaseIntensity[k]), backgroundColor: Object.keys(CATEGORIES).map(k => hexMap[k]), borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: true, color: '#F1F5F9' } }, x: { grid: { display: false } } } }
+            });
+        }
+
+        // --- 7. MODALS ---
+        function openEditModal(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            currentEditingId = taskId;
+            document.getElementById('modalTitle').textContent = `Edit: ${task.name}`;
+            document.getElementById('editName').value = task.name;
+            document.getElementById('editStart').value = task.start;
+            document.getElementById('editDuration').value = task.duration;
+            document.getElementById('editStatus').value = task.status;
+            document.getElementById('editDescription').value = task.description || '';
+            document.getElementById('editModal').classList.add('active');
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); if(id === 'editModal') currentEditingId = null; }
+        function saveTaskChanges() {
+            if (!currentEditingId) return;
+            const taskIndex = tasks.findIndex(t => t.id === currentEditingId);
+            if (taskIndex > -1) {
+                tasks[taskIndex].name = document.getElementById('editName').value;
+                tasks[taskIndex].start = parseInt(document.getElementById('editStart').value);
+                tasks[taskIndex].duration = parseInt(document.getElementById('editDuration').value);
+                tasks[taskIndex].status = document.getElementById('editStatus').value;
+                tasks[taskIndex].description = document.getElementById('editDescription').value;
+            }
+            saveState(); // SAVE
+            closeModal('editModal'); init();
+        }
+        function deleteCurrentTask() {
+            if(!currentEditingId) return;
+            if(confirm('Are you sure?')) { 
+                tasks = tasks.filter(t => t.id !== currentEditingId); 
+                saveState(); // SAVE
+                closeModal('editModal'); 
+                init(); 
+            }
+        }
+        function openAddModal(category) {
+            document.getElementById('addCategory').value = category;
+            document.getElementById('addName').value = '';
+            document.getElementById('addStart').value = 1;
+            document.getElementById('addDuration').value = 2;
+            document.getElementById('addModal').classList.add('active');
+        }
+        function confirmAddTask() {
+            const name = document.getElementById('addName').value;
+            if (!name) return alert("Enter task name");
+            tasks.push({
+                id: Math.max(...tasks.map(t => t.id)) + 1,
+                name: name,
+                start: parseInt(document.getElementById('addStart').value),
+                duration: parseInt(document.getElementById('addDuration').value),
+                status: 'Planned',
+                phase: document.getElementById('addCategory').value,
+                description: ""
+            });
+            saveState(); // SAVE
+            closeModal('addModal'); init();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

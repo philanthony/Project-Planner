@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Governance & Risk Tracker</title>
+  <style>
+    :root {
+      --bg-1: #020617;
+      --bg-2: #0f172a;
+      --panel: rgba(255,255,255,0.96);
+      --panel-2: #f8fafc;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+      --radius: 24px;
+      --radius-sm: 18px;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --caution: #eab308;
+      --safe: #10b981;
+      --primary: #7c3aed;
+      --primary-2: #06b6d4;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2) 55%, #1e293b);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .app { max-width: 1440px; margin: 0 auto; padding: 20px; }
+    .card {
+      background: var(--panel);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+    .hero {
+      position: relative;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(124,58,237,.16), rgba(6,182,212,.08), rgba(16,185,129,.16));
+      pointer-events: none;
+    }
+    .hero > * { position: relative; }
+    .hero-top {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .hero-title-wrap { display: flex; gap: 14px; align-items: flex-start; }
+    .shield {
+      width: 52px; height: 52px; border-radius: 18px;
+      background: #0f172a; color: white;
+      display: grid; place-items: center; font-size: 24px;
+      box-shadow: 0 12px 24px rgba(15,23,42,.24);
+    }
+    h1 { margin: 10px 0 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.08; }
+    p { margin: 0; }
+    .subtext { color: var(--muted); max-width: 900px; line-height: 1.6; margin-top: 10px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 999px; padding: 7px 12px;
+      font-size: 12px; font-weight: 700; border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-primary { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+    .badge-info { background: #e0f2fe; color: #075985; border-color: #bae6fd; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      appearance: none; border: 1px solid #cbd5e1; background: white; color: var(--text);
+      border-radius: 18px; padding: 10px 14px; font-weight: 700; cursor: pointer;
+      display: inline-flex; gap: 8px; align-items: center; box-shadow: 0 4px 12px rgba(15,23,42,.05);
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-dark { background: #0f172a; color: white; border-color: #0f172a; }
+    .btn-danger { background: #991b1b; color: white; border-color: #991b1b; }
+    .stats {
+      display: grid; gap: 16px;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      margin-bottom: 20px;
+    }
+    .stat {
+      background: var(--panel); border-radius: 24px; box-shadow: var(--shadow); overflow: hidden;
+    }
+    .stat-top { height: 6px; }
+    .stat-body { padding: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .stat-label { font-size: 13px; color: var(--muted); }
+    .stat-value { font-size: 32px; font-weight: 800; margin-top: 6px; }
+    .stat-help { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .stat-icon {
+      width: 44px; height: 44px; border-radius: 16px; color: white;
+      display: grid; place-items: center; font-size: 20px;
+      box-shadow: 0 12px 24px rgba(15,23,42,.14);
+    }
+    .layout {
+      display: grid; grid-template-columns: 360px 1fr; gap: 20px;
+    }
+    .sidebar, .main-panel { min-width: 0; }
+    .section-header { padding: 24px 24px 14px; }
+    .section-title { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .section-desc { margin-top: 6px; color: var(--muted); font-size: 14px; }
+    .search-wrap { position: relative; margin-top: 14px; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+    .input, .select, .textarea {
+      width: 100%; border: 1px solid var(--line); background: var(--panel-2); border-radius: 18px;
+      padding: 11px 14px; font: inherit; color: var(--text);
+    }
+    .input.search { padding-left: 36px; }
+    .textarea { min-height: 96px; resize: vertical; }
+    .field-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .tool-list { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px; }
+    .tool-item {
+      border: 1px solid var(--line); background: white; border-radius: 20px; padding: 16px;
+      cursor: pointer; transition: .2s ease;
+    }
+    .tool-item:hover { background: #f8fafc; box-shadow: 0 8px 18px rgba(15,23,42,.08); }
+    .tool-item.active { background: #f5f3ff; border-color: #c4b5fd; box-shadow: 0 8px 18px rgba(124,58,237,.14); }
+    .tool-top, .flex-between { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .tool-name { font-weight: 800; }
+    .tool-meta { margin-top: 4px; font-size: 13px; color: var(--muted); }
+    .tool-bottom { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+    .linkish { color: #6d28d9; font-weight: 700; }
+    .tabs {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px;
+      border-radius: 18px; color: white; margin-bottom: 16px;
+    }
+    .tab-btn {
+      border: none; background: transparent; color: inherit; font: inherit; font-weight: 800;
+      border-radius: 14px; padding: 12px 14px; cursor: pointer;
+    }
+    .tab-btn.active { background: rgba(255,255,255,.9); color: #0f172a; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .grid-4, .grid-3, .grid-2 { display: grid; gap: 16px; }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stack { display: flex; flex-direction: column; gap: 16px; }
+    .inner-card { padding: 0; }
+    .inner-topbar { height: 7px; }
+    .inner-content { padding: 22px; }
+    .headline-row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .headline { font-size: 28px; font-weight: 800; }
+    .muted { color: var(--muted); }
+    .pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .info-tile {
+      border: 1px solid var(--line); border-radius: 24px; padding: 16px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,1));
+    }
+    .info-kicker { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+    .info-value { margin-top: 10px; font-weight: 800; font-size: 16px; }
+    .box {
+      border: 1px solid var(--line); border-radius: 22px; background: var(--panel-2); padding: 16px;
+    }
+    .progress-track {
+      height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: 10px;
+    }
+    .progress-bar { height: 100%; border-radius: 999px; }
+    .metric {
+      border: 1px solid var(--line); border-radius: 18px; background: var(--panel-2); padding: 12px;
+    }
+    .metric-label { font-size: 12px; color: var(--muted); }
+    .metric-value { font-size: 16px; font-weight: 800; margin-top: 5px; }
+    .form-grid-3, .form-grid-2 { display: grid; gap: 12px; }
+    .form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .risk-card {
+      border: 1px solid var(--line); border-radius: 26px; padding: 18px; box-shadow: 0 8px 16px rgba(15,23,42,.06);
+    }
+    .risk-low { background: #ecfdf5; border-color: #86efac; }
+    .risk-medium { background: #fefce8; border-color: #fde047; }
+    .risk-high { background: #fff7ed; border-color: #fdba74; }
+    .risk-critical { background: #fef2f2; border-color: #fca5a5; }
+    .risk-header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .risk-title { font-weight: 800; }
+    .list { display: flex; flex-direction: column; gap: 12px; }
+    .check-item, .approval-item {
+      border: 1px solid var(--line); border-radius: 24px; padding: 14px; background: var(--panel-2);
+    }
+    .check-item.done { background: #ecfdf5; border-color: #86efac; }
+    .check-row { display: flex; gap: 12px; align-items: flex-start; }
+    .approval-item { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px; }
+    .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 1280px) {
+      .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .grid-3, .grid-2, .form-grid-3, .form-grid-2 { grid-template-columns: 1fr; }
+      .approval-item { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-4 { grid-template-columns: 1fr; }
+      .hero { padding: 20px; }
+      .section-header, .tool-list { padding-left: 18px; padding-right: 18px; }
+      .inner-content { padding: 18px; }
+    }
+    @media (max-width: 520px) {
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app"></div>
+
+  <script>
+    const STORAGE_KEY = "ai-governance-risk-tracker-static-v1";
+    const lifecycleOptions = ["Proposed","Under Review","Pilot","Approved","Restricted","Rejected","Retired"];
+    const riskLevelOptions = ["Low","Medium","High","Critical"];
+    const riskStatusOptions = ["Open","Mitigated","Monitoring","Accepted","Closed"];
+    const dataSensitivityOptions = ["Public","Internal","Confidential","Personal Data","Special Category Data"];
+    const aiTypeOptions = ["Generative AI","Predictive AI","Analytics","RAG system","Agentic system","Automation"];
+    const approvalStatusOptions = ["Pending","Approved","Not Required","Declined"];
+
+    const initialTools = [
+      {
+        id: 1,
+        name: "ChatGPT Edu",
+        vendor: "OpenAI",
+        category: "LLM Platform",
+        lifecycle: "Approved",
+        owner: "AI Team",
+        reviewDate: "2026-09-01",
+        decision: "Approved with conditions",
+        educationValue: "High",
+        strategicFit: "Supports AI literacy and equitable access goals.",
+        evidence: "Vendor security documentation, procurement review, DPIA draft.",
+        dataSensitivity: "Personal Data",
+        aiType: "Generative AI",
+        contractStart: "2026-02-01",
+        contractEnd: "2027-01-31",
+        procurementRoute: "Competitive procurement",
+        annualCost: "1000000",
+        usedBy: "Oxford, University of Sydney",
+        risks: [
+          { area: "Data Protection / GDPR", residual: "Medium", status: "Monitoring", mitigation: "Contractual controls, DPIA, guidance advising staff and students not to enter personal data.", owner: "Data Protection", due: "2026-06-01" },
+          { area: "Information Security", residual: "Medium", status: "Monitoring", mitigation: "Vendor security review, contractual security assurances, monitoring of vendor updates.", owner: "ITS Security", due: "2026-06-15" },
+          { area: "Academic Integrity", residual: "Medium", status: "Open", mitigation: "Assessment redesign support, staff training, guidance on responsible AI use.", owner: "Education", due: "2026-07-01" },
+          { area: "Reputational Risk", residual: "Low", status: "Monitoring", mitigation: "Clear institutional AI principles, transparent communication about purpose and safeguards.", owner: "Communications", due: "2026-07-15" },
+          { area: "Vendor Dependency / Lock-in", residual: "Medium", status: "Accepted", mitigation: "Regular market review and evaluation of alternative tools.", owner: "AI Team", due: "2027-01-01" },
+          { area: "Bias and Fairness", residual: "Medium", status: "Monitoring", mitigation: "AI literacy training emphasising critical evaluation of outputs.", owner: "AI Team", due: "2026-08-01" },
+          { area: "Accessibility", residual: "Low", status: "Open", mitigation: "Review vendor accessibility statements and ensure guidance includes accessibility considerations.", owner: "Accessibility Team", due: "2026-07-01" },
+          { area: "Operational Misuse / Over-reliance", residual: "Medium", status: "Open", mitigation: "Training emphasising critical thinking and appropriate use of AI tools.", owner: "AI Training", due: "2026-08-01" },
+          { area: "Data Residency / Sovereignty", residual: "Medium", status: "Monitoring", mitigation: "Review vendor data hosting arrangements and ensure contractual clarity.", owner: "Data Protection", due: "2026-06-20" }
+        ],
+        governanceChecklist: [
+          { id: 1, item: "Clear educational or operational purpose defined", checked: true, note: "Campus-wide AI access linked to AI literacy and staff productivity aims." },
+          { id: 2, item: "Alignment with institutional AI principles", checked: true, note: "Positioned against Kent's responsible and student-centred AI principles." },
+          { id: 3, item: "DPIA completed or reviewed", checked: false, note: "DPIA still in progress." },
+          { id: 4, item: "Procurement compliance confirmed", checked: true, note: "Completed through formal procurement route." },
+          { id: 5, item: "Vendor security and legal terms reviewed", checked: true, note: "Security and contract documentation reviewed." },
+          { id: 6, item: "Accessibility implications assessed", checked: false, note: "Accessibility review still to be confirmed in detail." },
+          { id: 7, item: "Academic integrity implications evaluated", checked: true, note: "Assessment and integrity implications considered." },
+          { id: 8, item: "Staff and student guidance prepared", checked: true, note: "Guidance and training materials planned and partly developed." },
+          { id: 9, item: "Training or literacy support available", checked: true, note: "AI literacy support is a core part of rollout." },
+          { id: 10, item: "Stakeholders consulted (ITS, Legal, DP, Education)", checked: true, note: "Relevant institutional stakeholders involved." },
+          { id: 11, item: "Contract renewal or exit strategy defined", checked: false, note: "Exit planning could be strengthened." },
+          { id: 12, item: "Next governance review date agreed", checked: true, note: "Review date recorded in the register." }
+        ],
+        approvals: [
+          { id: 1, team: "Data Protection", status: "Pending" },
+          { id: 2, team: "ITS Security", status: "Approved" },
+          { id: 3, team: "Legal", status: "Approved" },
+          { id: 4, team: "Education", status: "Approved" },
+          { id: 5, team: "Procurement", status: "Approved" }
+        ]
+      },
+      {
+        id: 2,
+        name: "NotebookLM",
+        vendor: "Google",
+        category: "Knowledge Tool",
+        lifecycle: "Under Review",
+        owner: "AI Team",
+        reviewDate: "2026-07-15",
+        decision: "Under review",
+        educationValue: "Medium",
+        strategicFit: "Potentially useful for study support and document-grounded workflows.",
+        evidence: "Vendor briefing slides, terms review, early scoping notes.",
+        dataSensitivity: "Internal",
+        aiType: "RAG system",
+        contractStart: "",
+        contractEnd: "",
+        procurementRoute: "Scoping",
+        annualCost: "0",
+        usedBy: "",
+        risks: [
+          { area: "Information Governance", residual: "Medium", status: "Open", mitigation: "Restrict use to suitable content and publish clear guidance.", owner: "Data Protection", due: "2026-06-30" },
+          { area: "Accessibility", residual: "Low", status: "Open", mitigation: "Review accessibility support in detail before wider adoption.", owner: "Accessibility Team", due: "2026-06-25" },
+          { area: "User Expectations / Accuracy", residual: "Medium", status: "Monitoring", mitigation: "Communicate strengths, limitations, and need for verification.", owner: "AI Team", due: "2026-07-05" }
+        ],
+        governanceChecklist: [
+          { id: 1, item: "Clear educational or operational purpose defined", checked: true, note: "Use cases identified for study support and synthesis." },
+          { id: 2, item: "Alignment with institutional AI principles", checked: true, note: "Potentially aligned, pending fuller review." },
+          { id: 3, item: "DPIA completed or reviewed", checked: false, note: "Not yet started." },
+          { id: 4, item: "Procurement compliance confirmed", checked: false, note: "Scoping stage only." },
+          { id: 5, item: "Vendor security and legal terms reviewed", checked: false, note: "Initial review only." },
+          { id: 6, item: "Accessibility implications assessed", checked: false, note: "Pending." }
+        ],
+        approvals: [
+          { id: 1, team: "Data Protection", status: "Pending" },
+          { id: 2, team: "ITS Security", status: "Pending" },
+          { id: 3, team: "Legal", status: "Pending" },
+          { id: 4, team: "Education", status: "Approved" },
+          { id: 5, team: "Procurement", status: "Pending" }
+        ]
+      }
+    ];
+
+    const riskWeights = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const state = {
+      tools: loadTools(),
+      query: "",
+      selectedId: loadTools()[0]?.id || 1,
+      activeTab: "overview"
+    };
+
+    function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+    function loadTools() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return clone(initialTools);
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed : clone(initialTools);
+      } catch {
+        return clone(initialTools);
+      }
+    }
+
+    function saveTools() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tools));
+    }
+
+    function calculateRiskScore(risks) {
+      return (risks || []).reduce((sum, r) => sum + (riskWeights[r.residual] || 0), 0);
+    }
+
+    function getHighestRisk(risks) {
+      const levels = (risks || []).map((r) => riskWeights[r.residual] || 0);
+      const max = Math.max(0, ...levels);
+      return Object.keys(riskWeights).find((k) => riskWeights[k] === max) || "Low";
+    }
+
+    function getGovernanceReadiness(tool) {
+      const items = tool.governanceChecklist || [];
+      if (!items.length) return 0;
+      const checked = items.filter((i) => i.checked).length;
+      return Math.round((checked / items.length) * 100);
+    }
+
+    function getOpenRiskCount(tool) {
+      return (tool.risks || []).filter((r) => ["Open", "Monitoring"].includes(r.status)).length;
+    }
+
+    function getPendingApprovalCount(tool) {
+      return (tool.approvals || []).filter((a) => a.status === "Pending").length;
+    }
+
+    function daysUntil(dateStr) {
+      if (!dateStr) return null;
+      const now = new Date();
+      const target = new Date(dateStr);
+      const diff = target.getTime() - now.getTime();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function getRiskTheme(score) {
+      if (score >= 16) return { tabs: "linear-gradient(90deg, #dc2626, #e11d48, #f97316)", badgeBg: "#fee2e2", badgeText: "#b91c1c", pillBg: "rgba(239,68,68,.12)", pillText: "#991b1b", glow: "linear-gradient(90deg, rgba(239,68,68,.15), rgba(225,29,72,.08), rgba(249,115,22,.15))" };
+      if (score >= 10) return { tabs: "linear-gradient(90deg, #f97316, #f59e0b, #facc15)", badgeBg: "#ffedd5", badgeText: "#c2410c", pillBg: "rgba(249,115,22,.12)", pillText: "#9a3412", glow: "linear-gradient(90deg, rgba(249,115,22,.15), rgba(245,158,11,.08), rgba(250,204,21,.15))" };
+      if (score >= 6) return { tabs: "linear-gradient(90deg, #fde047, #bef264, #86efac)", badgeBg: "#fef9c3", badgeText: "#854d0e", pillBg: "rgba(234,179,8,.12)", pillText: "#713f12", glow: "linear-gradient(90deg, rgba(250,204,21,.15), rgba(163,230,53,.08), rgba(74,222,128,.15))" };
+      return { tabs: "linear-gradient(90deg, #10b981, #14b8a6, #06b6d4)", badgeBg: "#d1fae5", badgeText: "#065f46", pillBg: "rgba(16,185,129,.12)", pillText: "#065f46", glow: "linear-gradient(90deg, rgba(16,185,129,.15), rgba(20,184,166,.08), rgba(6,182,212,.15))" };
+    }
+
+    function summaryStats(tools) {
+      const total = tools.length;
+      const approved = tools.filter((t) => t.lifecycle === "Approved").length;
+      const avgRisk = total ? Math.round(tools.reduce((s, t) => s + calculateRiskScore(t.risks), 0) / total) : 0;
+      const highRisk = tools.filter((t) => calculateRiskScore(t.risks) >= 10).length;
+      const pendingApprovals = tools.reduce((sum, t) => sum + getPendingApprovalCount(t), 0);
+      const dpiasPending = tools.filter((t) => (t.governanceChecklist || []).some((i) => i.item.toLowerCase().includes("dpia") && !i.checked)).length;
+      return { total, approved, avgRisk, highRisk, pendingApprovals, dpiasPending };
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(state.tools, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ai-governance-register.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCsv() {
+      const rows = [["Tool","Vendor","Category","Lifecycle","Owner","AI Type","Data Sensitivity","Review Date","Decision","Highest Risk","Risk Score","Governance Readiness","Annual Cost"]];
+      state.tools.forEach((tool) => {
+        rows.push([
+          tool.name, tool.vendor, tool.category, tool.lifecycle, tool.owner, tool.aiType,
+          tool.dataSensitivity, tool.reviewDate, tool.decision, getHighestRisk(tool.risks),
+          calculateRiskScore(tool.risks), `${getGovernanceReadiness(tool)}%`, tool.annualCost || ""
+        ]);
+      });
+      const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ai-governance-register.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJson(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(String(e.target?.result || "[]"));
+          if (Array.isArray(parsed) && parsed.length) {
+            state.tools = parsed;
+            state.selectedId = parsed[0].id;
+            saveTools();
+            render();
+          } else {
+            alert("That file is valid JSON, but it does not contain any tools.");
+          }
+        } catch {
+          alert("That file could not be imported. Please use a valid JSON export from this app.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    }
+
+    function addTool() {
+      const newId = Math.max(0, ...state.tools.map((tool) => tool.id)) + 1;
+      const newTool = {
+        id: newId,
+        name: `New Tool ${newId}`,
+        vendor: "",
+        category: "",
+        lifecycle: "Proposed",
+        owner: "",
+        reviewDate: "",
+        decision: "",
+        educationValue: "",
+        strategicFit: "",
+        evidence: "",
+        dataSensitivity: dataSensitivityOptions[0],
+        aiType: aiTypeOptions[0],
+        contractStart: "",
+        contractEnd: "",
+        procurementRoute: "",
+        annualCost: "",
+        usedBy: "",
+        risks: [{ area: "", residual: "Medium", status: "Open", mitigation: "", owner: "", due: "" }],
+        governanceChecklist: [{ id: 1, item: "", checked: false, note: "" }],
+        approvals: [{ id: 1, team: "", status: "Pending" }]
+      };
+      state.tools.push(newTool);
+      state.selectedId = newId;
+      saveTools();
+      render();
+    }
+
+    function deleteSelectedTool() {
+      const selected = getSelected();
+      if (!selected) return;
+      const remaining = state.tools.filter((tool) => tool.id !== selected.id);
+      if (!remaining.length) {
+        state.tools = clone(initialTools);
+        state.selectedId = state.tools[0].id;
+      } else {
+        state.tools = remaining;
+        state.selectedId = state.tools[0].id;
+      }
+      saveTools();
+      render();
+    }
+
+    function resetAllData() {
+      if (!confirm("Reset the tracker back to the sample data?")) return;
+      state.tools = clone(initialTools);
+      state.selectedId = state.tools[0].id;
+      localStorage.removeItem(STORAGE_KEY);
+      render();
+    }
+
+    function getFiltered() {
+      return state.tools.filter((tool) =>
+        [tool.name, tool.vendor, tool.category, tool.lifecycle, tool.aiType]
+          .join(" ")
+          .toLowerCase()
+          .includes(state.query.toLowerCase())
+      );
+    }
+
+    function getSelected() {
+      const filtered = getFiltered();
+      return filtered.find((t) => t.id === state.selectedId) || state.tools[0] || null;
+    }
+
+    function updateSelectedField(field, value) {
+      const selected = getSelected();
+      if (!selected) return;
+      selected[field] = value;
+      saveTools();
+      render();
+    }
+
+    function updateRisk(index, field, value) {
+      const selected = getSelected();
+      if (!selected) return;
+      selected.risks[index][field] = value;
+      saveTools();
+      render();
+    }
+
+    function addRisk() {
+      const selected = getSelected();
+      if (!selected) return;
+      selected.risks.push({ area: "", residual: "Medium", status: "Open", mitigation: "", owner: "", due: "" });
+      saveTools();
+      render();
+    }
+
+    function removeRisk(index) {
+      const selected = getSelected();
+      if (!selected) return;
+      selected.risks.splice(index, 1);
+      if (!selected.risks.length) selected.risks.push({ area: "", residual: "Medium", status: "Open", mitigation: "", owner: "", due: "" });
+      saveTools();
+      render();
+    }
+
+    function toggleChecklistItem(itemId) {
+      const selected = getSelected();
+      if (!selected) return;
+      const item = selected.governanceChecklist.find((i) => i.id === itemId);
+      if (item) item.checked = !item.checked;
+      saveTools();
+      render();
+    }
+
+    function updateChecklistItem(itemId, field, value) {
+      const selected = getSelected();
+      if (!selected) return;
+      const item = selected.governanceChecklist.find((i) => i.id === itemId);
+      if (item) item[field] = value;
+      saveTools();
+      render();
+    }
+
+    function addChecklistItem() {
+      const selected = getSelected();
+      if (!selected) return;
+      const nextId = Math.max(0, ...selected.governanceChecklist.map((item) => item.id)) + 1;
+      selected.governanceChecklist.push({ id: nextId, item: "", checked: false, note: "" });
+      saveTools();
+      render();
+    }
+
+    function updateApproval(approvalId, field, value) {
+      const selected = getSelected();
+      if (!selected) return;
+      const approval = selected.approvals.find((i) => i.id === approvalId);
+      if (approval) approval[field] = value;
+      saveTools();
+      render();
+    }
+
+    function addApproval() {
+      const selected = getSelected();
+      if (!selected) return;
+      const nextId = Math.max(0, ...selected.approvals.map((item) => item.id)) + 1;
+      selected.approvals.push({ id: nextId, team: "", status: "Pending" });
+      saveTools();
+      render();
+    }
+
+    function riskClass(level) {
+      if (level === "Critical") return "risk-critical";
+      if (level === "High") return "risk-high";
+      if (level === "Medium") return "risk-medium";
+      return "risk-low";
+    }
+
+    function badgeStyle(bg, text) {
+      return `background:${bg};color:${text};border-color:${bg};`;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function render() {
+      const app = document.getElementById("app");
+      const filtered = getFiltered();
+      const selected = getSelected();
+      const stats = summaryStats(state.tools);
+      const score = selected ? calculateRiskScore(selected.risks) : 0;
+      const theme = getRiskTheme(score);
+      const readiness = selected ? getGovernanceReadiness(selected) : 0;
+      const highestRisk = selected ? getHighestRisk(selected.risks) : "Low";
+      const renewalDays = selected ? daysUntil(selected.contractEnd) : null;
+
+      app.innerHTML = `
+        <div class="card hero">
+          <div class="hero-top">
+            <div>
+              <div class="hero-title-wrap">
+                <div class="shield">🛡️</div>
+                <div>
+                  <div class="badge-row">
+                    <span class="badge badge-primary">AI Governance</span>
+                    <span class="badge" style="${badgeStyle(theme.badgeBg, theme.badgeText)}">Risk score ${score}</span>
+                    <span class="badge badge-info">Readiness ${readiness}%</span>
+                  </div>
+                  <h1>AI Governance & Risk Tracker</h1>
+                </div>
+              </div>
+              <p class="subtext">A single-file static version you can drop onto GitHub Pages as <code>index.html</code>. It saves locally in the browser, and supports JSON import/export plus CSV export.</p>
+            </div>
+            <div class="btn-row">
+              <button class="btn" id="exportJsonBtn">⬇️ Export JSON</button>
+              <button class="btn" id="exportCsvBtn">📄 Export CSV</button>
+              <label class="btn" for="importJsonInput">⬆️ Import JSON</label>
+              <input id="importJsonInput" type="file" accept="application/json" class="hidden" />
+              <button class="btn btn-dark" id="addToolBtn">➕ Add tool</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats">
+          ${statCard("Tools tracked", stats.total, "In active review or live use", "📁", "linear-gradient(90deg,#8b5cf6,#d946ef)")}
+          ${statCard("Approved", stats.approved, "Governance complete", "✅", "linear-gradient(90deg,#10b981,#14b8a6)")}
+          ${statCard("Avg residual risk", stats.avgRisk, "Across tracked tools", "⚠️", "linear-gradient(90deg,#f59e0b,#f97316)")}
+          ${statCard("High-risk tools", stats.highRisk, "Score 10 or higher", "🚨", "linear-gradient(90deg,#f43f5e,#ef4444)")}
+          ${statCard("Pending approvals", stats.pendingApprovals, "Across all tools", "🧾", "linear-gradient(90deg,#0ea5e9,#06b6d4)")}
+          ${statCard("DPIAs pending", stats.dpiasPending, "Checks still open", "🛡️", "linear-gradient(90deg,#6366f1,#8b5cf6)")}
+        </div>
+
+        <div class="layout">
+          <div class="sidebar card">
+            <div class="section-header">
+              <div class="section-title">🏛️ Tool register</div>
+              <div class="section-desc">Select a tool to review its governance position.</div>
+              <div class="search-wrap">
+                <span class="search-icon">🔎</span>
+                <input class="input search" id="searchInput" placeholder="Search tools" value="${escapeHtml(state.query)}" />
+              </div>
+            </div>
+            <div class="tool-list">
+              ${filtered.map((tool) => {
+                const toolScore = calculateRiskScore(tool.risks);
+                const active = tool.id === (selected?.id || -1);
+                const toolTheme = getRiskTheme(toolScore);
+                return `
+                  <div class="tool-item ${active ? "active" : ""}" data-tool-id="${tool.id}">
+                    <div class="tool-top">
+                      <div>
+                        <div class="tool-name">${escapeHtml(tool.name)}</div>
+                        <div class="tool-meta">${escapeHtml(tool.vendor)} • ${escapeHtml(tool.category)}</div>
+                      </div>
+                      <span class="badge" style="${badgeStyle(toolTheme.badgeBg, toolTheme.badgeText)}">${toolScore}</span>
+                    </div>
+                    <div class="tool-bottom">
+                      <span class="muted">${escapeHtml(tool.lifecycle)}</span>
+                      <span class="linkish">Open ›</span>
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+
+          <div class="main-panel">
+            ${selected ? renderSelected(selected, theme, score, highestRisk, readiness, renewalDays) : `<div class="card inner-content">No tools found.</div>`}
+          </div>
+        </div>
+      `;
+      bindEvents();
+    }
+
+    function statCard(title, value, subtitle, icon, accent) {
+      return `
+        <div class="stat">
+          <div class="stat-top" style="background:${accent}"></div>
+          <div class="stat-body">
+            <div>
+              <div class="stat-label">${title}</div>
+              <div class="stat-value">${escapeHtml(value)}</div>
+              <div class="stat-help">${subtitle}</div>
+            </div>
+            <div class="stat-icon" style="background:${accent}">${icon}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSelected(selected, theme, score, highestRisk, readiness, renewalDays) {
+      return `
+        <div class="tabs" style="background:${theme.tabs}">
+          <button class="tab-btn ${state.activeTab === "overview" ? "active" : ""}" data-tab="overview">Overview</button>
+          <button class="tab-btn ${state.activeTab === "risk" ? "active" : ""}" data-tab="risk">Risk</button>
+          <button class="tab-btn ${state.activeTab === "governance" ? "active" : ""}" data-tab="governance">Governance</button>
+        </div>
+
+        <div class="tab-panel ${state.activeTab === "overview" ? "active" : ""}">
+          <div class="stack">
+            <div class="card inner-card">
+              <div class="inner-topbar" style="background:linear-gradient(90deg,#8b5cf6,#d946ef,#06b6d4)"></div>
+              <div class="inner-content">
+                <div class="headline-row">
+                  <div>
+                    <div class="headline">${escapeHtml(selected.name)}</div>
+                    <div class="muted" style="margin-top:6px;">${escapeHtml(selected.vendor)} • ${escapeHtml(selected.category)}</div>
+                  </div>
+                  <div class="pill-group">
+                    <span class="badge" style="background:#f1f5f9;color:#334155;border-color:#e2e8f0;">${escapeHtml(selected.lifecycle)}</span>
+                    <span class="badge" style="${badgeStyle(theme.badgeBg, theme.badgeText)}">Highest risk ${escapeHtml(highestRisk)}</span>
+                    <span class="badge badge-info">Readiness ${readiness}%</span>
+                  </div>
+                </div>
+                <div class="grid-4" style="margin-top:18px;">
+                  ${infoTile("⏱️", "Lifecycle", selected.lifecycle, "linear-gradient(135deg, rgba(139,92,246,.12), rgba(217,70,239,.12))")}
+                  ${infoTile("👥", "Owner", selected.owner || "Not set", "linear-gradient(135deg, rgba(6,182,212,.12), rgba(59,130,246,.12))")}
+                  ${infoTile("📅", "Review date", selected.reviewDate || "Not set", "linear-gradient(135deg, rgba(16,185,129,.12), rgba(20,184,166,.12))")}
+                  ${infoTile("🖥️", "AI type", selected.aiType || "Not set", "linear-gradient(135deg, rgba(245,158,11,.12), rgba(249,115,22,.12))")}
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="card inner-card">
+                <div class="inner-topbar" style="background:linear-gradient(90deg,#fbbf24,#f97316,#f43f5e)"></div>
+                <div class="inner-content stack">
+                  <div>
+                    <div class="section-title">Strategic and educational value</div>
+                    <div class="section-desc">Why this tool matters institutionally.</div>
+                  </div>
+                  <div class="box"><strong>Educational value:</strong> ${escapeHtml(selected.educationValue || "Not recorded")}</div>
+                  <div class="box"><strong>Strategic alignment:</strong> ${escapeHtml(selected.strategicFit || "Not recorded")}</div>
+                  <div class="box"><strong>Used by other universities:</strong> ${escapeHtml(selected.usedBy || "Not recorded")}</div>
+                </div>
+              </div>
+
+              <div class="card inner-card">
+                <div class="inner-topbar" style="background:linear-gradient(90deg,#0ea5e9,#06b6d4,#14b8a6)"></div>
+                <div class="inner-content stack">
+                  <div>
+                    <div class="section-title">Governance readiness</div>
+                    <div class="section-desc">Progress against required checks.</div>
+                  </div>
+                  <div class="box">
+                    <div class="flex-between">
+                      <span class="muted">Completion</span>
+                      <strong style="font-size:32px;">${readiness}%</strong>
+                    </div>
+                    <div class="progress-track"><div class="progress-bar" style="width:${readiness}%; background:linear-gradient(90deg,#0ea5e9,#06b6d4);"></div></div>
+                  </div>
+                  <div class="grid-2">
+                    ${miniMetric("Open risks", getOpenRiskCount(selected))}
+                    ${miniMetric("Pending approvals", getPendingApprovalCount(selected))}
+                    ${miniMetric("Data sensitivity", selected.dataSensitivity || "Not set")}
+                    ${miniMetric("Renewal", renewalDays === null ? "N/A" : `${renewalDays}d`)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card inner-card">
+              <div class="inner-topbar" style="background:linear-gradient(90deg,#6366f1,#8b5cf6,#d946ef)"></div>
+              <div class="inner-content stack">
+                <div>
+                  <div class="section-title">Tool and contract details</div>
+                  <div class="section-desc">Edit core governance metadata for the selected tool.</div>
+                </div>
+                <div class="form-grid-3">
+                  ${selectField("Lifecycle", "selected.lifecycle", selected.lifecycle, lifecycleOptions)}
+                  ${selectField("Data sensitivity", "selected.dataSensitivity", selected.dataSensitivity, dataSensitivityOptions)}
+                  ${selectField("AI type", "selected.aiType", selected.aiType, aiTypeOptions)}
+                  ${inputField("Contract start", "selected.contractStart", selected.contractStart, "YYYY-MM-DD")}
+                  ${inputField("Contract end", "selected.contractEnd", selected.contractEnd, "YYYY-MM-DD")}
+                  ${inputField("Annual cost", "selected.annualCost", selected.annualCost, "0")}
+                  ${inputField("Procurement route", "selected.procurementRoute", selected.procurementRoute, "Procurement route")}
+                  ${inputField("Review date", "selected.reviewDate", selected.reviewDate, "YYYY-MM-DD")}
+                  ${inputField("Used by other universities", "selected.usedBy", selected.usedBy, "Institution names")}
+                </div>
+                <div class="top-actions">
+                  <button class="btn btn-danger" id="deleteToolBtn">🗑️ Delete selected tool</button>
+                  <button class="btn" id="resetAllBtn">♻️ Reset sample data</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel ${state.activeTab === "risk" ? "active" : ""}">
+          <div class="card inner-card">
+            <div class="inner-topbar" style="background:linear-gradient(90deg,#ef4444,#fb923c,#fde047)"></div>
+            <div class="inner-content stack">
+              <div class="headline-row">
+                <div>
+                  <div class="section-title">Risk register</div>
+                  <div class="section-desc">Edit risks, statuses, and mitigations.</div>
+                </div>
+                <button class="btn btn-dark" id="addRiskBtn">➕ Add Risk</button>
+              </div>
+              <div class="list">
+                ${selected.risks.map((risk, i) => `
+                  <div class="risk-card ${riskClass(risk.residual)}">
+                    <div class="risk-header">
+                      <div class="risk-title">Risk ${i + 1}</div>
+                      <div class="pill-group">
+                        <span class="badge" style="background:${getRiskTheme(riskWeights[risk.residual] || 0).pillBg};color:${getRiskTheme(riskWeights[risk.residual] || 0).pillText};border-color:transparent;">${escapeHtml(risk.residual)}</span>
+                        <span class="badge" style="background:white;color:#334155;border-color:#cbd5e1;">${escapeHtml(risk.status)}</span>
+                      </div>
+                    </div>
+                    <div class="stack" style="margin-top:12px;">
+                      ${inputField("Risk area", `risk.${i}.area`, risk.area, "Risk area")}
+                      <div class="form-grid-2">
+                        ${selectField("Risk level", `risk.${i}.residual`, risk.residual, riskLevelOptions)}
+                        ${selectField("Risk status", `risk.${i}.status`, risk.status, riskStatusOptions)}
+                      </div>
+                      ${textareaField("Mitigation", `risk.${i}.mitigation`, risk.mitigation, "Mitigation")}
+                      <div class="form-grid-2">
+                        ${inputField("Risk owner", `risk.${i}.owner`, risk.owner, "Risk owner")}
+                        ${inputField("Due date", `risk.${i}.due`, risk.due, "Due date")}
+                      </div>
+                      <div><button class="btn" data-remove-risk="${i}">🗑️ Remove risk</button></div>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel ${state.activeTab === "governance" ? "active" : ""}">
+          <div class="stack">
+            <div class="grid-2">
+              <div class="card inner-card">
+                <div class="inner-topbar" style="background:linear-gradient(90deg,#06b6d4,#0ea5e9,#8b5cf6)"></div>
+                <div class="inner-content stack">
+                  <div>
+                    <div class="section-title">Governance decision</div>
+                    <div class="section-desc">Recorded decision and supporting evidence.</div>
+                  </div>
+                  ${inputField("Decision", "selected.decision", selected.decision, "Decision")}
+                  ${textareaField("Evidence reviewed", "selected.evidence", selected.evidence, "Evidence reviewed")}
+                </div>
+              </div>
+
+              <div class="card inner-card">
+                <div class="inner-topbar" style="background:linear-gradient(90deg,#3b82f6,#8b5cf6,#d946ef)"></div>
+                <div class="inner-content stack">
+                  <div class="headline-row">
+                    <div>
+                      <div class="section-title">Stakeholder approvals</div>
+                      <div class="section-desc">Track sign-off across key institutional teams.</div>
+                    </div>
+                    <button class="btn btn-dark" id="addApprovalBtn">➕ Add Approval</button>
+                  </div>
+                  <div class="list">
+                    ${selected.approvals.map((approval) => `
+                      <div class="approval-item">
+                        ${inputField("Team", `approval.${approval.id}.team`, approval.team, "Team")}
+                        ${selectField("Status", `approval.${approval.id}.status`, approval.status, approvalStatusOptions)}
+                      </div>
+                    `).join("")}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card inner-card">
+              <div class="inner-topbar" style="background:linear-gradient(90deg,#10b981,#14b8a6,#06b6d4)"></div>
+              <div class="inner-content stack">
+                <div class="headline-row">
+                  <div>
+                    <div class="section-title">Governance checklist</div>
+                    <div class="section-desc">Edit, tick off, and add governance checks for the selected tool.</div>
+                  </div>
+                  <button class="btn btn-dark" id="addChecklistBtn">➕ Add Check</button>
+                </div>
+                <div class="list">
+                  ${selected.governanceChecklist.map((item) => `
+                    <div class="check-item ${item.checked ? "done" : ""}">
+                      <div class="check-row">
+                        <input type="checkbox" data-toggle-check="${item.id}" ${item.checked ? "checked" : ""} style="margin-top: 6px; width:16px; height:16px;" />
+                        <div style="flex:1; min-width:0;" class="stack">
+                          ${inputField("Governance check", `check.${item.id}.item`, item.item, "Governance check")}
+                          ${textareaField("Notes or evidence", `check.${item.id}.note`, item.note, "Notes or evidence")}
+                        </div>
+                      </div>
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function infoTile(icon, title, value, bg) {
+      return `<div class="info-tile" style="background:${bg}"><div class="info-kicker"><span>${icon}</span><span>${title}</span></div><div class="info-value">${escapeHtml(value || "Not set")}</div></div>`;
+    }
+
+    function miniMetric(label, value) {
+      return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${escapeHtml(value)}</div></div>`;
+    }
+
+    function inputField(label, key, value, placeholder) {
+      return `<div><div class="field-label">${label}</div><input class="input" data-bind="${key}" value="${escapeHtml(value || "")}" placeholder="${escapeHtml(placeholder)}" /></div>`;
+    }
+
+    function textareaField(label, key, value, placeholder) {
+      return `<div><div class="field-label">${label}</div><textarea class="textarea" data-bind="${key}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value || "")}</textarea></div>`;
+    }
+
+    function selectField(label, key, value, options) {
+      return `<div><div class="field-label">${label}</div><select class="select" data-bind="${key}">${options.map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select></div>`;
+    }
+
+    function bindEvents() {
+      document.getElementById("searchInput")?.addEventListener("input", (e) => { state.query = e.target.value; render(); });
+      document.querySelectorAll("[data-tool-id]").forEach((el) => el.addEventListener("click", () => { state.selectedId = Number(el.getAttribute("data-tool-id")); render(); }));
+      document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", () => { state.activeTab = el.getAttribute("data-tab"); render(); }));
+      document.querySelectorAll("[data-bind]").forEach((el) => {
+        el.addEventListener("input", onFieldChange);
+        el.addEventListener("change", onFieldChange);
+      });
+      document.querySelectorAll("[data-toggle-check]").forEach((el) => el.addEventListener("change", () => toggleChecklistItem(Number(el.getAttribute("data-toggle-check")))));
+      document.querySelectorAll("[data-remove-risk]").forEach((el) => el.addEventListener("click", () => removeRisk(Number(el.getAttribute("data-remove-risk")))));
+      document.getElementById("exportJsonBtn")?.addEventListener("click", exportJson);
+      document.getElementById("exportCsvBtn")?.addEventListener("click", exportCsv);
+      document.getElementById("importJsonInput")?.addEventListener("change", importJson);
+      document.getElementById("addToolBtn")?.addEventListener("click", addTool);
+      document.getElementById("deleteToolBtn")?.addEventListener("click", deleteSelectedTool);
+      document.getElementById("resetAllBtn")?.addEventListener("click", resetAllData);
+      document.getElementById("addRiskBtn")?.addEventListener("click", addRisk);
+      document.getElementById("addApprovalBtn")?.addEventListener("click", addApproval);
+      document.getElementById("addChecklistBtn")?.addEventListener("click", addChecklistItem);
+    }
+
+    function onFieldChange(event) {
+      const key = event.target.getAttribute("data-bind");
+      if (!key) return;
+      const value = event.target.value;
+      const parts = key.split(".");
+      if (parts[0] === "selected") return updateSelectedField(parts[1], value);
+      if (parts[0] === "risk") return updateRisk(Number(parts[1]), parts[2], value);
+      if (parts[0] === "check") return updateChecklistItem(Number(parts[1]), parts[2], value);
+      if (parts[0] === "approval") return updateApproval(Number(parts[1]), parts[2], value);
+    }
+
+    render();
+  </script>
+</body>
+</html>
